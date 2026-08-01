@@ -48,6 +48,23 @@
   .swatch.free{background:var(--free)} .swatch.partial{background:var(--partial)}
   .swatch.full{background:var(--taken)} .swatch.mine{background:var(--accent)}
 
+  /* ---------- whole-room card ---------- */
+  .roomcard{padding:0;margin-bottom:14px;overflow:hidden}
+  .roomcard-btn{width:100%;border:0;background:var(--surface);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:7px;text-align:left;transition:outline .1s}
+  .roomcard-btn:hover{outline:2px solid var(--accent);outline-offset:-2px}
+  .roomcard-btn.selected{outline:2px solid var(--accent);outline-offset:-2px;box-shadow:0 6px 18px -8px rgba(13,125,114,.6)}
+  .roomcard-btn.mine{background:var(--accent-tint)}
+  .roomcard-btn.partial{background:var(--partial-tint)}
+  .roomcard-btn.full{background:var(--surface-2)}
+  .rc-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .rc-title{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px}
+  .roomcard-btn.free .tag{color:var(--accent-ink)}
+  .roomcard-btn.partial .tag{color:#8a5a12}
+  .roomcard-btn.full .tag{color:var(--danger)}
+  .roomcard-btn.mine .tag{color:var(--accent-ink)}
+  .rc-sub{font-size:13px;color:var(--ink-soft)}
+  .roomcard-btn .hours-bar{margin-top:2px}
+
   /* ---------- floor plan ---------- */
   .room{overflow:hidden}
   .window-band{background:linear-gradient(#cfe3f2,#eaf3fa);border-bottom:1px solid var(--line);text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5b7c93;padding:9px}
@@ -144,6 +161,8 @@
     </div>
   </div>
 
+  <div class="panel roomcard" id="roomCard"></div>
+
   <div class="panel room">
     <div class="window-band">Windows · city view</div>
     <div class="room-body">
@@ -210,7 +229,7 @@ const CONFIG = {
   startHour: 9,          // first bookable hour (24h)
   endHour:   17,         // slots run up to but not including this (9–17 = 09:00…16:00)
   retentionDays: 30,     // auto-remove bookings this long after their date
-  contactEmail: "ms4yw@sheffield.ac.uk",      // shown in the privacy notice, e.g. "office@example.com"
+  contactEmail: "",      // shown in the privacy notice, e.g. "office@example.com"
 
   // ---- SHARED MODE (optional): fill both to share bookings across everyone.
   //      Use a Supabase project in the London (eu-west-2) region. ----
@@ -221,7 +240,11 @@ const CONFIG = {
 
 const SHARED = Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
 const ALLDAY = "ALLDAY";
+const ROOM = "ROOM";   // sentinel "desk" representing a whole-room booking
 const DESKS = CONFIG.pods.flatMap(p => p.desks);
+
+// Accept the bare project URL even if someone pastes a trailing slash or /rest/v1.
+const SUPA_URL = (CONFIG.supabaseUrl || "").trim().replace(/\/+$/,"").replace(/\/rest\/v1$/i,"");
 
 /* ---------- utilities ---------- */
 const pad = n => String(n).padStart(2, "0");
@@ -260,7 +283,7 @@ function SupabaseStore(c){
 let store;
 async function initStore(){
   if(SHARED){ const {createClient}=await import("https://esm.sh/@supabase/supabase-js@2");
-    store=SupabaseStore(createClient(CONFIG.supabaseUrl,CONFIG.supabaseAnonKey)); }
+    store=SupabaseStore(createClient(SUPA_URL,CONFIG.supabaseAnonKey.trim())); }
   else { store=LocalStore(); }
 }
 
@@ -268,32 +291,73 @@ async function initStore(){
 let current=new Date(); current.setHours(0,0,0,0);
 let bookings=[];
 let selectedDesk=null;
+let dataError=null;
 const $=id=>document.getElementById(id);
 
-/* ---------- per-desk status for the selected day ---------- */
+/* ---------- per-desk status for the selected day ----------
+   A desk hour is blocked by a booking on that desk OR by a whole-room booking. */
 function deskStatus(desk){
-  const list=bookings.filter(b=>b.desk===desk);
-  const allDay=list.find(b=>b.slot===ALLDAY);
+  const roomAll = bookings.find(b=>b.desk===ROOM && b.slot===ALLDAY);
+  const deskList = bookings.filter(b=>b.desk===desk);
+  const deskAll = deskList.find(b=>b.slot===ALLDAY);
+  const roomAny = bookings.some(b=>b.desk===ROOM);
   const segs=HOURS.map(h=>{
-    if(allDay) return {h, state: allDay.device_id===deviceId ? "mine":"allday"};
-    const hit=list.find(b=>b.slot===h);
-    if(hit) return {h, state: hit.device_id===deviceId ? "mine":"taken"};
+    const dHit = deskAll || deskList.find(b=>b.slot===h);
+    if(dHit) return {h, booking:dHit, source:"desk",
+      state: dHit.device_id===deviceId ? "mine" : (dHit.slot===ALLDAY ? "allday" : "taken")};
+    const rHit = roomAll || bookings.find(b=>b.desk===ROOM && b.slot===h);
+    if(rHit) return {h, booking:rHit, source:"room", state:"taken"};
     return {h, state:"free"};
   });
-  const mine=list.some(b=>b.device_id===deviceId);
-  const freeCount=allDay ? 0 : segs.filter(s=>s.state==="free").length;
-  let kind;
-  if(mine) kind="mine";
-  else if(allDay || freeCount===0) kind="full";
-  else if(freeCount<HOURS.length) kind="partial";
-  else kind="free";
-  return {list, allDay, segs, mine, freeCount, kind};
+  const mine=deskList.some(b=>b.device_id===deviceId);
+  const freeCount=segs.filter(s=>s.state==="free").length;
+  const kind = mine ? "mine" : freeCount===0 ? "full" : freeCount<HOURS.length ? "partial" : "free";
+  return {deskList, deskAll, roomAny, segs, mine, freeCount, kind};
+}
+
+/* ---------- whole-room status ----------
+   A room hour is free only if no desk AND no room booking touches that hour. */
+function roomStatus(){
+  const roomList = bookings.filter(b=>b.desk===ROOM);
+  const roomAll = roomList.find(b=>b.slot===ALLDAY);
+  const anyBooking = bookings.length>0;
+  const segs=HOURS.map(h=>{
+    const rHit = roomAll || roomList.find(b=>b.slot===h);
+    if(rHit) return {h, booking:rHit, source:"room",
+      state: rHit.device_id===deviceId ? "mine" : "taken"};
+    const dHit = bookings.find(b=>b.desk!==ROOM && (b.slot===ALLDAY || b.slot===h));
+    if(dHit) return {h, booking:dHit, source:"desk", state:"taken"};
+    return {h, state:"free"};
+  });
+  const mine=roomList.some(b=>b.device_id===deviceId);
+  const freeCount=segs.filter(s=>s.state==="free").length;
+  const kind = mine ? "mine" : freeCount===0 ? "full" : freeCount<HOURS.length ? "partial" : "free";
+  return {roomList, roomAll, anyBooking, segs, mine, freeCount, kind};
+}
+
+/* ---------- whole-room summary card ---------- */
+function renderRoomCard(){
+  const st=roomStatus();
+  const tag = st.kind==="full" ? "Fully booked"
+            : st.kind==="mine" ? "Booked by you"
+            : st.freeCount===HOURS.length ? "Free all day"
+            : `${st.freeCount}h free`;
+  const bar=st.segs.map(s=>`<span class="hseg ${s.state==="free"?"free":s.state==="mine"?"mine":""}" title="${s.h} ${s.state}"></span>`).join("");
+  $("roomCard").innerHTML=`
+    <button class="roomcard-btn ${st.kind} ${selectedDesk===ROOM?"selected":""}" data-desk="ROOM" aria-label="Whole room, ${tag}">
+      <div class="rc-top"><span class="rc-title">Whole room</span><span class="tag">${tag}</span></div>
+      <div class="rc-sub">Reserve all ${DESKS.length} desks for a meeting or event</div>
+      <div class="hours-bar">${bar}</div>
+    </button>`;
 }
 
 /* ---------- render floor plan ---------- */
 function renderPlan(){
   $("dayLabel").textContent=current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
   $("dayIso").textContent=isoOf(current);
+  const hint=$("planHint");
+  if(dataError){ hint.textContent="Couldn't reach the booking database, so availability may be out of date. "+dataError; hint.style.color="var(--danger)"; }
+  else { hint.textContent="Tap a desk to see its times for the selected day."; hint.style.color=""; }
 
   let html="";
   for(const pod of CONFIG.pods){
@@ -314,39 +378,48 @@ function renderPlan(){
   $("pods").innerHTML=html;
 }
 
-/* ---------- render desk detail ---------- */
+/* ---------- render desk / room detail ---------- */
 function renderDetail(){
   const box=$("deskDetail");
   if(!selectedDesk){ box.classList.remove("open"); box.innerHTML=""; return; }
-  const st=deskStatus(selectedDesk);
+  const isRoom = selectedDesk===ROOM;
+  const st = isRoom ? roomStatus() : deskStatus(selectedDesk);
   const when=current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
 
+  const myAll = isRoom
+    ? (st.roomAll && st.roomAll.device_id===deviceId ? st.roomAll : null)
+    : (st.deskAll && st.deskAll.device_id===deviceId ? st.deskAll : null);
+  const blockedForDay = isRoom ? st.anyBooking : (st.deskList.length>0 || st.roomAny);
+
   let wholeDay;
-  if(st.allDay && st.allDay.device_id===deviceId)
-    wholeDay=`<button class="btn danger" data-cancel="${st.allDay.id}">Cancel whole-day booking</button>`;
-  else if(st.list.length)
-    wholeDay=`<button class="btn" disabled>Whole day unavailable</button><span class="hint">Some hours are already booked.</span>`;
+  if(myAll)
+    wholeDay=`<button class="btn danger" data-cancel="${myAll.id}">Cancel whole-day booking</button>`;
+  else if(blockedForDay)
+    wholeDay=`<button class="btn" disabled>Whole day unavailable</button><span class="hint">${isRoom?"Some desks or hours are already booked.":"Some hours are already booked."}</span>`;
   else
-    wholeDay=`<button class="btn primary" data-book="${ALLDAY}">Book the whole day</button>`;
+    wholeDay=`<button class="btn primary" data-book="${ALLDAY}">Book the whole ${isRoom?"room, all day":"day"}</button>`;
 
   let slots="";
   for(const s of st.segs){
     if(s.state==="free")
       slots+=`<button class="slot-btn free" data-book="${s.h}">${s.h}</button>`;
-    else if(s.state==="mine"){
-      const b=st.list.find(x=>x.slot===s.h);
-      slots+=`<button class="slot-btn mine" data-cancel="${b?b.id:""}" title="Your booking — tap to cancel">${s.h} ✕</button>`;
-    } else if(s.state==="allday")
+    else if(s.state==="mine")
+      slots+=`<button class="slot-btn mine" data-cancel="${s.booking?s.booking.id:""}" title="Your booking — tap to cancel">${s.h} ✕</button>`;
+    else if(s.state==="allday")
       slots+=`<div class="slot-btn allday" title="Booked all day">${s.h}</div>`;
-    else {
-      const b=st.list.find(x=>x.slot===s.h);
-      slots+=`<div class="slot-btn taken" title="${b?escapeHtml(b.name||'Booked'):'Booked'}">${s.h}</div>`;
+    else{
+      const t = s.source==="room" ? "Whole room booked" : escapeHtml((s.booking&&s.booking.name)||"Booked");
+      slots+=`<div class="slot-btn taken" title="${t}">${s.h}</div>`;
     }
   }
 
+  const sub = isRoom
+    ? `${when} · reserving the room books every desk — tap a free time`
+    : `${when} · tap a free time to book it`;
+
   box.innerHTML=`
-    <h2>${escapeHtml(selectedDesk)}</h2>
-    <p class="sub">${when} · tap a free time to book it</p>
+    <h2>${isRoom ? "Whole room" : escapeHtml(selectedDesk)}</h2>
+    <p class="sub">${sub}</p>
     <div class="wholeday">${wholeDay}</div>
     <div class="slotgrid">${slots}</div>`;
   box.classList.add("open");
@@ -358,20 +431,20 @@ function renderMine(){
   if(!mine.length){ box.innerHTML=`<p class="empty">No bookings for this day. Pick a desk on the plan to make one.</p>`; return; }
   box.innerHTML=mine.map(b=>`
     <div class="booking-row">
-      <div><strong>${escapeHtml(b.desk)}</strong> — ${slotLabel(b.slot)}
+      <div><strong>${b.desk===ROOM?"Whole room":escapeHtml(b.desk)}</strong> — ${slotLabel(b.slot)}
         <div class="meta">${b.date} · ${escapeHtml(b.name||"")}</div></div>
       <button class="btn" data-cancel="${b.id}">Cancel</button>
     </div>`).join("");
 }
 
-function renderAll(){ renderPlan(); renderDetail(); renderMine(); }
+function renderAll(){ renderRoomCard(); renderPlan(); renderDetail(); renderMine(); }
 
 /* ---------- booking flow ---------- */
 let pending=null;
 const overlay=$("overlay");
 function openModal(desk,slot){
   pending={desk,slot};
-  $("mTitle").textContent=`Book ${desk}`;
+  $("mTitle").textContent = desk===ROOM ? "Book the whole room" : `Book ${desk}`;
   $("mWhen").textContent=`${current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} · ${slotLabel(slot)}`;
   $("mErr").textContent=""; $("consentBox").checked=false;
   $("nameInput").value=localStorage.getItem("desk_last_name")||"";
@@ -385,8 +458,9 @@ async function confirmBooking(){
   if(!name){ $("mErr").textContent="Please enter a name for the booking."; return; }
   if(!$("consentBox").checked){ $("mErr").textContent="Please tick the box to continue."; return; }
   await refresh();
-  const clash=bookings.some(b=>b.desk===pending.desk &&
-    (b.slot===ALLDAY || pending.slot===ALLDAY || b.slot===pending.slot));
+  const clash=bookings.some(b=>
+    (b.slot===ALLDAY || pending.slot===ALLDAY || b.slot===pending.slot) &&
+    (pending.desk===ROOM || b.desk===ROOM || b.desk===pending.desk));
   if(clash){ $("mErr").textContent="Sorry, that just got taken. Pick another slot."; renderAll(); return; }
   const booking={ id:uid(), date:isoOf(current), desk:pending.desk, slot:pending.slot,
     name:name.slice(0,40), device_id:deviceId, created_at:new Date().toISOString() };
@@ -402,10 +476,15 @@ async function cancelBooking(id){
 }
 
 /* ---------- events ---------- */
+function selectDesk(id){
+  selectedDesk=id; renderAll();
+  $("deskDetail").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 $("pods").addEventListener("click",e=>{
-  const d=e.target.closest("[data-desk]");
-  if(d){ selectedDesk=d.getAttribute("data-desk"); renderAll();
-    $("deskDetail").scrollIntoView({behavior:"smooth",block:"nearest"}); }
+  const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk"));
+});
+$("roomCard").addEventListener("click",e=>{
+  const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk"));
 });
 $("deskDetail").addEventListener("click",e=>{
   const book=e.target.closest("[data-book]");
@@ -428,7 +507,10 @@ $("privacyLink").onclick=e=>{ e.preventDefault(); closeModal();
   const d=document.querySelector("footer details"); d.open=true; d.scrollIntoView({behavior:"smooth"}); };
 
 /* ---------- boot ---------- */
-async function refresh(){ bookings=await store.list(isoOf(current)); }
+async function refresh(){
+  try{ bookings=await store.list(isoOf(current)); dataError=null; }
+  catch(e){ dataError=(e&&e.message)||String(e); console.error("Load failed:",e); }
+}
 function applyCopy(){
   $("retentionText").textContent=`${CONFIG.retentionDays} days`;
   if(SHARED){
@@ -441,7 +523,13 @@ function applyCopy(){
   if(CONFIG.contactEmail)
     $("contactText").innerHTML=`To make a request, contact <a href="mailto:${CONFIG.contactEmail}">${escapeHtml(CONFIG.contactEmail)}</a>.`;
 }
-(async function(){ applyCopy(); await initStore(); await refresh(); renderAll(); })();
+(async function(){
+  applyCopy();
+  try{ await initStore(); }
+  catch(e){ dataError=(e&&e.message)||String(e); console.error("Init failed:",e); }
+  await refresh();
+  renderAll();
+})();
 </script>
 </body>
 </html>
