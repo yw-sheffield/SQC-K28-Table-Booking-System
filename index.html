@@ -105,6 +105,8 @@
   .slot-btn.taken{background:repeating-linear-gradient(45deg,var(--taken),var(--taken) 6px,#c6d0db 6px,#c6d0db 12px);color:var(--taken-ink);cursor:not-allowed;border-color:transparent}
   .slot-btn.mine{background:var(--accent);color:#fff;border-color:var(--accent)}
   .slot-btn.allday{background:var(--allday-tint);color:var(--allday);cursor:not-allowed;border-color:transparent}
+  .slot-btn.cancelable{cursor:pointer}
+  .slot-btn.taken.cancelable:hover,.slot-btn.allday.cancelable:hover{outline:2px solid var(--danger);outline-offset:-2px}
 
   section.mine-list{margin-top:20px;padding:16px}
   section.mine-list h2{font-family:"Space Grotesk",sans-serif;font-size:16px;margin:0 0 10px}
@@ -185,7 +187,7 @@
       <summary>Privacy notice — how your booking data is handled</summary>
       <p><strong>What we collect.</strong> When you book a desk we store the desk, the date, the time slot, and the name you type in. We ask for a name only so colleagues can see who has a desk; a first name or initials is enough. Please don't enter anything you wouldn't want others who use this booking page to see.</p>
       <p><strong>Why.</strong> The only purpose is managing shared desks. Bookings are visible to anyone with access to this page.</p>
-      <p><strong>How long.</strong> Bookings are automatically removed <span id="retentionText">30 days</span> after their date. You can cancel any booking you made from this device at any time.</p>
+      <p><strong>How long.</strong> Bookings are automatically removed <span id="retentionText">30 days</span> after their date. Any booking can be cancelled from this page — tap the desk (or the Whole room card), then tap the booked time.</p>
       <p><strong>Where.</strong> <span id="storageText">In demo mode, data stays only in this browser and is never sent anywhere.</span></p>
       <p><strong>Your rights.</strong> Under UK GDPR you can ask for a copy of, correction of, or deletion of your data. <span id="contactText">Update the contact details in this notice before going live.</span></p>
     </details>
@@ -213,6 +215,19 @@
   </div>
 </div>
 
+<!-- Cancel confirmation modal -->
+<div class="overlay" id="cancelOverlay" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+  <div class="modal">
+    <h2 id="cTitle">Cancel this booking?</h2>
+    <p class="when" id="cWhen">—</p>
+    <p class="hint">This frees the slot for others and can't be undone.</p>
+    <div class="modal-actions">
+      <button class="btn" id="keepBooking">Keep it</button>
+      <button class="btn danger" id="confirmCancel">Cancel booking</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ============================================================
    CONFIG — edit this block, then commit.
@@ -227,7 +242,7 @@ const CONFIG = {
   ],
 
   startHour: 6,          // first bookable hour (24h)
-  endHour:   22,         // slots run up to but not including this (9–17 = 09:00…16:00)
+  endHour:   22,         // slots run up to but not including this (6–22 = 06:00…21:00)
   retentionDays: 30,     // auto-remove bookings this long after their date
   contactEmail: "ms4yw@sheffield.ac.uk",      // shown in the privacy notice, e.g. "office@example.com"
 
@@ -277,7 +292,7 @@ function SupabaseStore(c){
   return {
     async list(iso){ const {data,error}=await c.from(T).select("*").eq("date",iso); if(error)throw error; return data||[]; },
     async create(b){ const {data,error}=await c.from(T).insert(b).select().single(); if(error)throw error; return data; },
-    async remove(id){ const {error}=await c.from(T).delete().eq("id",id).eq("device_id",deviceId); if(error)throw error; },
+    async remove(id){ const {error}=await c.from(T).delete().eq("id",id); if(error)throw error; },
   };
 }
 let store;
@@ -401,21 +416,25 @@ function renderDetail(){
 
   let slots="";
   for(const s of st.segs){
-    if(s.state==="free")
-      slots+=`<button class="slot-btn free" data-book="${s.h}">${s.h}</button>`;
-    else if(s.state==="mine")
-      slots+=`<button class="slot-btn mine" data-cancel="${s.booking?s.booking.id:""}" title="Your booking — tap to cancel">${s.h} ✕</button>`;
-    else if(s.state==="allday")
-      slots+=`<div class="slot-btn allday" title="Booked all day">${s.h}</div>`;
-    else{
-      const t = s.source==="room" ? "Whole room booked" : escapeHtml((s.booking&&s.booking.name)||"Booked");
-      slots+=`<div class="slot-btn taken" title="${t}">${s.h}</div>`;
+    if(s.state==="free"){ slots+=`<button class="slot-btn free" data-book="${s.h}">${s.h}</button>`; continue; }
+    if(s.state==="mine"){ slots+=`<button class="slot-btn mine" data-cancel="${s.booking?s.booking.id:""}" title="Your booking — tap to cancel">${s.h} ✕</button>`; continue; }
+    // someone else's booking (state "taken" or "allday")
+    const b=s.booking;
+    const cls = s.state==="allday" ? "allday" : "taken";
+    const ownSource = isRoom ? (s.source==="room") : (s.source==="desk");
+    if(ownSource && b){
+      const who = escapeHtml(b.name||"someone");
+      slots+=`<button class="slot-btn ${cls} cancelable" data-cancelask="${b.id}" title="Booked by ${who} — tap to cancel">${s.h}</button>`;
+    }else{
+      const t = s.source==="room" ? "Whole room is booked — cancel it from the Whole room card"
+                                  : "A desk is booked at this time";
+      slots+=`<div class="slot-btn ${cls}" title="${t}">${s.h}</div>`;
     }
   }
 
   const sub = isRoom
-    ? `${when} · reserving the room books every desk — tap a free time`
-    : `${when} · tap a free time to book it`;
+    ? `${when} · tap a free time to book the room, or a booked time to cancel it`
+    : `${when} · tap a free time to book, or a booked time to cancel`;
 
   box.innerHTML=`
     <h2>${isRoom ? "Whole room" : escapeHtml(selectedDesk)}</h2>
@@ -475,6 +494,19 @@ async function cancelBooking(id){
   catch(e){ alert("Could not cancel: "+(e.message||"")); }
 }
 
+/* confirmation before cancelling someone else's booking */
+let pendingCancel=null;
+const cancelOverlay=$("cancelOverlay");
+function askCancel(id){
+  const b=bookings.find(x=>x.id===id);
+  if(!b){ return; }
+  pendingCancel=id;
+  const label=b.desk===ROOM?"Whole room":b.desk;
+  $("cWhen").textContent=`${label} · ${slotLabel(b.slot)} · booked by ${b.name||"someone"}`;
+  cancelOverlay.classList.add("open");
+}
+function closeCancel(){ cancelOverlay.classList.remove("open"); pendingCancel=null; }
+
 /* ---------- events ---------- */
 function selectDesk(id){
   selectedDesk=id; renderAll();
@@ -487,8 +519,10 @@ $("roomCard").addEventListener("click",e=>{
   const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk"));
 });
 $("deskDetail").addEventListener("click",e=>{
+  const ask=e.target.closest("[data-cancelask]");
   const book=e.target.closest("[data-book]");
   const cancel=e.target.closest("[data-cancel]");
+  if(ask){ askCancel(ask.getAttribute("data-cancelask")); return; }
   if(cancel){ cancelBooking(cancel.getAttribute("data-cancel")); return; }
   if(book && selectedDesk){ openModal(selectedDesk, book.getAttribute("data-book")); }
 });
@@ -500,8 +534,11 @@ $("nextDay").onclick=()=>{ current.setDate(current.getDate()+1); refresh().then(
 $("todayBtn").onclick=()=>{ current=new Date(); current.setHours(0,0,0,0); refresh().then(renderAll); };
 $("confirmBook").onclick=confirmBooking;
 $("cancelModal").onclick=closeModal;
+$("confirmCancel").onclick=async()=>{ const id=pendingCancel; closeCancel(); if(id) await cancelBooking(id); };
+$("keepBooking").onclick=closeCancel;
 overlay.addEventListener("click",e=>{ if(e.target===overlay) closeModal(); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeModal(); });
+cancelOverlay.addEventListener("click",e=>{ if(e.target===cancelOverlay) closeCancel(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeCancel(); } });
 $("nameInput").addEventListener("keydown",e=>{ if(e.key==="Enter") confirmBooking(); });
 $("privacyLink").onclick=e=>{ e.preventDefault(); closeModal();
   const d=document.querySelector("footer details"); d.open=true; d.scrollIntoView({behavior:"smooth"}); };
