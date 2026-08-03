@@ -627,7 +627,7 @@ async function reloadAndRender(){ await refresh(); await refreshMonth(); renderA
 /* ---------- boot ---------- */
 function applyCopy(){
   if(SHARED){ $("modeText").textContent="Shared"; $("modeBadge").classList.add("shared");
-    $("footNote").textContent="Bookings and notes are shared with everyone who has this link, stored securely in the London region and auto-removed "+CONFIG.retentionDays+" days after their date.";
+    $("footNote").textContent="Bookings and notes are shared with everyone who has this link and stored securely in the London region. Past dates are cleared automatically each day, so only today's and upcoming bookings and notes are kept.";
   }else{
     $("footNote").textContent="Demo mode — bookings and notes are saved only on this device. Add your Supabase keys in the config to share them.";
   }
