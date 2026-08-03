@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Desk Booking</title>
-<meta name="description" content="Book a desk by the hour or for the whole day, straight from the floor plan." />
+<meta name="description" content="Book a desk by the hour or the whole day, pick a date from the calendar, and leave a note on the board." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -21,18 +21,13 @@
   }
   *{box-sizing:border-box} html,body{margin:0}
   body{background:var(--paper);color:var(--ink);font-family:"Inter",system-ui,-apple-system,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:900px;margin:0 auto;padding:28px 20px 64px}
-  header.site{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 64px}
+  header.site{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
   h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(26px,4vw,38px);letter-spacing:-.02em;margin:0 0 4px}
   .tagline{color:var(--ink-soft);margin:0;font-size:15px}
   .mode{font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line-strong);border-radius:999px;padding:6px 12px;background:var(--surface);white-space:nowrap;display:inline-flex;align-items:center;gap:8px}
   .dot{width:8px;height:8px;border-radius:50%;background:var(--allday)} .mode.shared .dot{background:var(--accent)}
   .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-
-  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px}
-  .datenav{display:flex;align-items:center;gap:10px}
-  .datenav .day{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:17px;min-width:200px;text-align:center}
-  .datenav .day small{display:block;font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.05em}
   button{font-family:inherit;cursor:pointer}
   .btn{border:1px solid var(--line-strong);background:var(--surface-2);color:var(--ink);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:500}
   .btn:hover{border-color:var(--ink-soft)}
@@ -42,39 +37,57 @@
   .btn.danger{background:#fff;border-color:var(--danger);color:var(--danger)}
   .btn:disabled{opacity:.5;cursor:not-allowed}
 
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-soft);align-items:center}
+  /* ---------- calendar ---------- */
+  .calendar{padding:14px 16px;margin-bottom:14px}
+  .cal-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .cal-title{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px;min-width:180px;text-align:center}
+  .cal-head .spacer{flex:1}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-dow{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);text-align:center;padding:2px 0}
+  .cal-day{min-height:48px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:14px;color:var(--ink);cursor:pointer;transition:border-color .1s}
+  .cal-day:hover{border-color:var(--accent)}
+  .cal-day.empty{border:0;background:transparent;cursor:default}
+  .cal-day.today{border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  .cal-day.selected{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .cdot{width:5px;height:5px;border-radius:50%;background:var(--accent)}
+  .cal-day.selected .cdot{background:#fff}
+
+  /* ---------- two-column layout ---------- */
+  .layout{display:grid;grid-template-columns:1fr 330px;gap:14px;align-items:start}
+  .main{min-width:0;display:flex;flex-direction:column;gap:14px}
+  .side{min-width:0}
+  @media (max-width:860px){ .layout{grid-template-columns:1fr} }
+
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft);align-items:center}
   .legend span{display:inline-flex;align-items:center;gap:6px}
-  .swatch{width:14px;height:14px;border-radius:4px;border:1px solid var(--line-strong)}
+  .swatch{width:13px;height:13px;border-radius:4px;border:1px solid var(--line-strong)}
   .swatch.free{background:var(--free)} .swatch.partial{background:var(--partial)}
   .swatch.full{background:var(--taken)} .swatch.mine{background:var(--accent)}
 
   /* ---------- whole-room card ---------- */
-  .roomcard{padding:0;margin-bottom:14px;overflow:hidden}
+  .roomcard{padding:0;overflow:hidden}
   .roomcard-btn{width:100%;border:0;background:var(--surface);border-radius:var(--radius);padding:16px 18px;display:flex;flex-direction:column;gap:7px;text-align:left;transition:outline .1s}
   .roomcard-btn:hover{outline:2px solid var(--accent);outline-offset:-2px}
   .roomcard-btn.selected{outline:2px solid var(--accent);outline-offset:-2px;box-shadow:0 6px 18px -8px rgba(13,125,114,.6)}
-  .roomcard-btn.mine{background:var(--accent-tint)}
-  .roomcard-btn.partial{background:var(--partial-tint)}
-  .roomcard-btn.full{background:var(--surface-2)}
+  .roomcard-btn.mine{background:var(--accent-tint)} .roomcard-btn.partial{background:var(--partial-tint)} .roomcard-btn.full{background:var(--surface-2)}
   .rc-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
   .rc-title{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px}
-  .roomcard-btn.free .tag{color:var(--accent-ink)}
-  .roomcard-btn.partial .tag{color:#8a5a12}
-  .roomcard-btn.full .tag{color:var(--danger)}
-  .roomcard-btn.mine .tag{color:var(--accent-ink)}
+  .roomcard-btn.free .tag{color:var(--accent-ink)} .roomcard-btn.partial .tag{color:#8a5a12}
+  .roomcard-btn.full .tag{color:var(--danger)} .roomcard-btn.mine .tag{color:var(--accent-ink)}
   .rc-sub{font-size:13px;color:var(--ink-soft)}
   .roomcard-btn .hours-bar{margin-top:2px}
 
   /* ---------- floor plan ---------- */
   .room{overflow:hidden}
+  .room-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .sel-day{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:16px}
   .window-band{background:linear-gradient(#cfe3f2,#eaf3fa);border-bottom:1px solid var(--line);text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5b7c93;padding:9px}
   .room-body{display:flex;align-items:stretch}
   .wall{flex:0 0 30px;display:flex;align-items:center;justify-content:center;background:var(--surface-2)}
   .wall.left{border-right:1px solid var(--line)} .wall.right{border-left:1px solid var(--line)}
   .wall span{writing-mode:vertical-rl;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
   .wall.left span{transform:rotate(180deg)}
-  .pods{flex:1;display:flex;flex-direction:column;gap:24px;padding:24px 18px;
-    background:repeating-linear-gradient(90deg,#eef1f5,#eef1f5 3px,#e7ebf1 3px,#e7ebf1 6px)}
+  .pods{flex:1;display:flex;flex-direction:column;gap:24px;padding:24px 18px;background:repeating-linear-gradient(90deg,#eef1f5,#eef1f5 3px,#e7ebf1 3px,#e7ebf1 6px)}
   .pod{max-width:340px;width:100%;margin:0 auto}
   .pod-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:8px}
   .pod-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:var(--line-strong);border:4px solid var(--line-strong);border-radius:12px;padding:5px}
@@ -93,8 +106,8 @@
   .hseg.free{background:var(--free)} .hseg.mine{background:var(--accent)} .hseg.allday{background:var(--allday)}
   .plan-hint{font-size:12.5px;color:var(--ink-soft);text-align:center;padding:0 0 14px}
 
-  /* ---------- desk detail ---------- */
-  .deskdetail{margin-top:16px;padding:18px;display:none}
+  /* ---------- desk / room detail ---------- */
+  .deskdetail{padding:18px;display:none}
   .deskdetail.open{display:block}
   .deskdetail h2{font-family:"Space Grotesk",sans-serif;font-size:18px;margin:0 0 2px}
   .deskdetail .sub{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin:0 0 14px}
@@ -108,17 +121,31 @@
   .slot-btn.cancelable{cursor:pointer}
   .slot-btn.taken.cancelable:hover,.slot-btn.allday.cancelable:hover{outline:2px solid var(--danger);outline-offset:-2px}
 
-  section.mine-list{margin-top:20px;padding:16px}
+  section.mine-list{padding:16px}
   section.mine-list h2{font-family:"Space Grotesk",sans-serif;font-size:16px;margin:0 0 10px}
   .booking-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;font-size:14px}
   .booking-row .meta{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
   .empty{color:var(--ink-soft);font-size:14px}
 
-  footer.legal{margin-top:32px;font-size:13px;color:var(--ink-soft)}
-  footer.legal details{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:2px 16px;margin-bottom:12px}
-  footer.legal summary{cursor:pointer;font-weight:600;color:var(--ink);padding:12px 0;font-size:14px}
-  footer.legal p{margin:8px 0 14px} footer.legal a{color:var(--accent-ink)}
+  /* ---------- noticeboard ---------- */
+  .comments{padding:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:14px}
+  .comments h2{font-family:"Space Grotesk",sans-serif;font-size:16px;margin:0}
+  .comments .sub{font-size:12.5px;color:var(--ink-soft);margin:-6px 0 0}
+  .comment-list{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto}
+  .comment{border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;background:var(--surface-2)}
+  .c-meta{font-family:var(--mono);font-size:11px;color:var(--ink-soft);display:flex;justify-content:space-between;gap:8px;margin-bottom:3px}
+  .c-text{white-space:pre-wrap;word-break:break-word}
+  .c-del{border:0;background:none;color:var(--danger);cursor:pointer;font-size:11px;font-family:var(--mono)}
+  .comment-empty{color:var(--ink-soft);font-size:13px}
+  .comment-form{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+  .comment-form input,.comment-form textarea{width:100%;font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface-2)}
+  .comment-form input:focus,.comment-form textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .comment-form textarea{resize:vertical;min-height:64px}
+  .cf-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 
+  footer.legal{margin-top:24px;font-size:12.5px;color:var(--ink-soft)}
+
+  /* ---------- modals ---------- */
   .overlay{position:fixed;inset:0;background:rgba(27,36,50,.42);display:none;place-items:center;padding:18px;z-index:50}
   .overlay.open{display:grid}
   .modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);width:100%;max-width:420px;padding:22px;animation:pop .16s ease-out}
@@ -143,56 +170,72 @@
   <header class="site">
     <div>
       <h1>Desk Booking</h1>
-      <p class="tagline">Find your desk on the plan, then pick an hour or the whole day.</p>
+      <p class="tagline">Pick a day, find your desk on the plan, book a time — and leave a note on the board.</p>
     </div>
     <span class="mode" id="modeBadge"><span class="dot"></span><span id="modeText">Demo mode</span></span>
   </header>
 
-  <div class="panel toolbar">
-    <div class="datenav">
-      <button class="btn icon" id="prevDay" aria-label="Previous day">‹</button>
-      <div class="day"><span id="dayLabel">—</span><small id="dayIso">—</small></div>
-      <button class="btn icon" id="nextDay" aria-label="Next day">›</button>
+  <!-- Calendar -->
+  <div class="panel calendar">
+    <div class="cal-head">
+      <button class="btn icon" id="prevMonth" aria-label="Previous month">‹</button>
+      <div class="cal-title" id="calTitle">—</div>
+      <button class="btn icon" id="nextMonth" aria-label="Next month">›</button>
+      <span class="spacer"></span>
       <button class="btn" id="todayBtn">Today</button>
     </div>
-    <div class="legend">
-      <span><i class="swatch free"></i> Free</span>
-      <span><i class="swatch partial"></i> Some slots left</span>
-      <span><i class="swatch full"></i> Full</span>
-      <span><i class="swatch mine"></i> Yours</span>
-    </div>
+    <div class="cal-grid" id="calGrid"></div>
   </div>
 
-  <div class="panel roomcard" id="roomCard"></div>
+  <div class="layout">
+    <div class="main">
+      <div class="panel roomcard" id="roomCard"></div>
 
-  <div class="panel room">
-    <div class="window-band">Windows · city view</div>
-    <div class="room-body">
-      <div class="wall left"><span>Whiteboard</span></div>
-      <div class="pods" id="pods"></div>
-      <div class="wall right"><span>Whiteboard · soft seating</span></div>
+      <div class="panel room">
+        <div class="room-head">
+          <div class="sel-day" id="selDay">—</div>
+          <div class="legend">
+            <span><i class="swatch free"></i> Free</span>
+            <span><i class="swatch partial"></i> Some left</span>
+            <span><i class="swatch full"></i> Full</span>
+            <span><i class="swatch mine"></i> Yours</span>
+          </div>
+        </div>
+        <div class="window-band">Windows · city view</div>
+        <div class="room-body">
+          <div class="wall left"><span>Whiteboard</span></div>
+          <div class="pods" id="pods"></div>
+          <div class="wall right"><span>Whiteboard · soft seating</span></div>
+        </div>
+        <p class="plan-hint" id="planHint">Tap a desk to see its times for the selected day.</p>
+      </div>
+
+      <section class="panel deskdetail" id="deskDetail"></section>
+
+      <section class="panel mine-list">
+        <h2>Bookings made from this device</h2>
+        <div id="mineList"><p class="empty">No bookings yet. Pick a desk on the plan to make one.</p></div>
+      </section>
     </div>
-    <p class="plan-hint" id="planHint">Tap a desk to see its times for the selected day.</p>
+
+    <aside class="side">
+      <div class="panel comments">
+        <h2>Noticeboard</h2>
+        <p class="sub" id="commentsSub">—</p>
+        <div class="comment-list" id="commentList"></div>
+        <div class="comment-form">
+          <input type="text" id="commentName" maxlength="40" autocomplete="off" placeholder="Name (optional)" />
+          <textarea id="commentText" maxlength="280" placeholder="e.g. I would like to chat about maths this afternoon — I'm at W3"></textarea>
+          <div class="cf-row">
+            <span class="hint">Visible to everyone using this page.</span>
+            <button class="btn primary" id="postComment">Post note</button>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
 
-  <section class="panel deskdetail" id="deskDetail"></section>
-
-  <section class="panel mine-list">
-    <h2>Bookings made from this device</h2>
-    <div id="mineList"><p class="empty">No bookings yet. Pick a desk on the plan to make one.</p></div>
-  </section>
-
-  <footer class="legal">
-    <details>
-      <summary>Privacy notice — how your booking data is handled</summary>
-      <p><strong>What we collect.</strong> When you book a desk we store the desk, the date, the time slot, and the name you type in. We ask for a name only so colleagues can see who has a desk; a first name or initials is enough. Please don't enter anything you wouldn't want others who use this booking page to see.</p>
-      <p><strong>Why.</strong> The only purpose is managing shared desks. Bookings are visible to anyone with access to this page.</p>
-      <p><strong>How long.</strong> Bookings are automatically removed <span id="retentionText">30 days</span> after their date. Any booking can be cancelled from this page — tap the desk (or the Whole room card), then tap the booked time.</p>
-      <p><strong>Where.</strong> <span id="storageText">In demo mode, data stays only in this browser and is never sent anywhere.</span></p>
-      <p><strong>Your rights.</strong> Under UK GDPR you can ask for a copy of, correction of, or deletion of your data. <span id="contactText">Update the contact details in this notice before going live.</span></p>
-    </details>
-    <p id="footNote"></p>
-  </footer>
+  <footer class="legal"><p id="footNote"></p></footer>
 </div>
 
 <!-- Booking confirmation modal -->
@@ -205,7 +248,7 @@
     <p class="hint">Minimise what you share — a first name or initials is fine.</p>
     <label class="consent">
       <input type="checkbox" id="consentBox" />
-      <span>I understand this name and booking will be visible to others using this page, as described in the <a href="#" id="privacyLink">privacy notice</a>.</span>
+      <span>I understand this name and booking will be visible to everyone using this page.</span>
     </label>
     <p class="err" id="mErr"></p>
     <div class="modal-actions">
@@ -231,9 +274,6 @@
 <script type="module">
 /* ============================================================
    CONFIG — edit this block, then commit.
-   The "pods" describe the room layout so the floor plan matches
-   reality. Each pod is drawn as a 2×2 block of four desks, in the
-   order listed: [top-left, top-right, bottom-left, bottom-right].
    ============================================================ */
 const CONFIG = {
   pods: [
@@ -243,10 +283,9 @@ const CONFIG = {
 
   startHour: 6,          // first bookable hour (24h)
   endHour:   22,         // slots run up to but not including this (6–22 = 06:00…21:00)
-  retentionDays: 30,     // auto-remove bookings this long after their date
-  contactEmail: "ms4yw@sheffield.ac.uk",      // shown in the privacy notice, e.g. "office@example.com"
+  retentionDays: 30,     // auto-remove bookings/notes this long after their date
 
-  // ---- SHARED MODE (optional): fill both to share bookings across everyone.
+  // ---- SHARED MODE (optional): fill both to share across everyone.
   //      Use a Supabase project in the London (eu-west-2) region. ----
   supabaseUrl: "https://faqtqlxazaexretowlco.supabase.co",       // Settings > Data API, e.g. "https://abcd1234.supabase.co"
   supabaseAnonKey: "sb_publishable_eRMv1MXpqqnwGLyJWMkzwg_vEhzuUX_",   // Settings > API Keys — the Publishable key (sb_publishable_…) or legacy anon key
@@ -255,10 +294,8 @@ const CONFIG = {
 
 const SHARED = Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
 const ALLDAY = "ALLDAY";
-const ROOM = "ROOM";   // sentinel "desk" representing a whole-room booking
+const ROOM = "ROOM";
 const DESKS = CONFIG.pods.flatMap(p => p.desks);
-
-// Accept the bare project URL even if someone pastes a trailing slash or /rest/v1.
 const SUPA_URL = (CONFIG.supabaseUrl || "").trim().replace(/\/+$/,"").replace(/\/rest\/v1$/i,"");
 
 /* ---------- utilities ---------- */
@@ -269,30 +306,40 @@ const slotLabel = s => s === ALLDAY ? "Whole day" : `${s}–${pad(parseInt(s)+1)
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()));
 const escapeHtml = s => String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const attr = s => escapeHtml(s).replace(/"/g,"&quot;");
+const longDate = d => d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
 
 const DEVICE_KEY = "desk_booking_device_id";
 let deviceId = localStorage.getItem(DEVICE_KEY);
 if (!deviceId){ deviceId = uid(); localStorage.setItem(DEVICE_KEY, deviceId); }
 
-/* ---------- data layer (same API for both stores) ---------- */
+/* ---------- data layer ---------- */
 function LocalStore(){
-  const KEY="desk_bookings_v1";
-  const all=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[]}catch{return[]}};
-  const save=r=>localStorage.setItem(KEY,JSON.stringify(r));
-  (()=>{const c=new Date();c.setDate(c.getDate()-CONFIG.retentionDays);
-    const keep=all().filter(b=>new Date(b.date)>=c); if(keep.length!==all().length) save(keep);})();
+  const BK="desk_bookings_v1", CM="desk_comments_v1";
+  const get=k=>{try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}};
+  const put=(k,r)=>localStorage.setItem(k,JSON.stringify(r));
+  (()=>{ // purge old records
+    const c=new Date();c.setDate(c.getDate()-CONFIG.retentionDays); const cut=isoOf(c);
+    for(const k of [BK,CM]){ const keep=get(k).filter(x=>x.date>=cut); if(keep.length!==get(k).length) put(k,keep); }
+  })();
   return {
-    async list(iso){ return all().filter(b=>b.date===iso); },
-    async create(b){ const r=all(); r.push(b); save(r); return b; },
-    async remove(id){ save(all().filter(b=>b.id!==id)); },
+    async list(iso){ return get(BK).filter(b=>b.date===iso); },
+    async listMonth(s,e){ return get(BK).filter(b=>b.date>=s && b.date<=e); },
+    async create(b){ const r=get(BK); r.push(b); put(BK,r); return b; },
+    async remove(id){ put(BK,get(BK).filter(b=>b.id!==id)); },
+    async listComments(iso){ return get(CM).filter(c=>c.date===iso); },
+    async createComment(c){ const r=get(CM); r.push(c); put(CM,r); return c; },
+    async removeComment(id){ put(CM,get(CM).filter(c=>c.id!==id)); },
   };
 }
 function SupabaseStore(c){
-  const T="bookings";
   return {
-    async list(iso){ const {data,error}=await c.from(T).select("*").eq("date",iso); if(error)throw error; return data||[]; },
-    async create(b){ const {data,error}=await c.from(T).insert(b).select().single(); if(error)throw error; return data; },
-    async remove(id){ const {error}=await c.from(T).delete().eq("id",id); if(error)throw error; },
+    async list(iso){ const {data,error}=await c.from("bookings").select("*").eq("date",iso); if(error)throw error; return data||[]; },
+    async listMonth(s,e){ const {data,error}=await c.from("bookings").select("*").gte("date",s).lte("date",e); if(error)throw error; return data||[]; },
+    async create(b){ const {data,error}=await c.from("bookings").insert(b).select().single(); if(error)throw error; return data; },
+    async remove(id){ const {error}=await c.from("bookings").delete().eq("id",id); if(error)throw error; },
+    async listComments(iso){ const {data,error}=await c.from("comments").select("*").eq("date",iso); if(error)throw error; return data||[]; },
+    async createComment(cm){ const {data,error}=await c.from("comments").insert(cm).select().single(); if(error)throw error; return data; },
+    async removeComment(id){ const {error}=await c.from("comments").delete().eq("id",id).eq("device_id",deviceId); if(error)throw error; },
   };
 }
 let store;
@@ -304,13 +351,12 @@ async function initStore(){
 
 /* ---------- state ---------- */
 let current=new Date(); current.setHours(0,0,0,0);
-let bookings=[];
-let selectedDesk=null;
-let dataError=null;
+let viewY=current.getFullYear(), viewM=current.getMonth();
+let bookings=[], monthBookings=[], comments=[];
+let selectedDesk=null, dataError=null;
 const $=id=>document.getElementById(id);
 
-/* ---------- per-desk status for the selected day ----------
-   A desk hour is blocked by a booking on that desk OR by a whole-room booking. */
+/* ---------- statuses ---------- */
 function deskStatus(desk){
   const roomAll = bookings.find(b=>b.desk===ROOM && b.slot===ALLDAY);
   const deskList = bookings.filter(b=>b.desk===desk);
@@ -329,17 +375,13 @@ function deskStatus(desk){
   const kind = mine ? "mine" : freeCount===0 ? "full" : freeCount<HOURS.length ? "partial" : "free";
   return {deskList, deskAll, roomAny, segs, mine, freeCount, kind};
 }
-
-/* ---------- whole-room status ----------
-   A room hour is free only if no desk AND no room booking touches that hour. */
 function roomStatus(){
   const roomList = bookings.filter(b=>b.desk===ROOM);
   const roomAll = roomList.find(b=>b.slot===ALLDAY);
   const anyBooking = bookings.length>0;
   const segs=HOURS.map(h=>{
     const rHit = roomAll || roomList.find(b=>b.slot===h);
-    if(rHit) return {h, booking:rHit, source:"room",
-      state: rHit.device_id===deviceId ? "mine" : "taken"};
+    if(rHit) return {h, booking:rHit, source:"room", state: rHit.device_id===deviceId ? "mine" : "taken"};
     const dHit = bookings.find(b=>b.desk!==ROOM && (b.slot===ALLDAY || b.slot===h));
     if(dHit) return {h, booking:dHit, source:"desk", state:"taken"};
     return {h, state:"free"};
@@ -350,14 +392,31 @@ function roomStatus(){
   return {roomList, roomAll, anyBooking, segs, mine, freeCount, kind};
 }
 
-/* ---------- whole-room summary card ---------- */
+/* ---------- calendar ---------- */
+function renderCalendar(){
+  $("calTitle").textContent = new Date(viewY,viewM,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const dows=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+  let html=dows.map(d=>`<div class="cal-dow">${d}</div>`).join("");
+  const offset=(new Date(viewY,viewM,1).getDay()+6)%7;       // Mon-first
+  const daysIn=new Date(viewY,viewM+1,0).getDate();
+  const todayIso=isoOf(new Date()), curIso=isoOf(current);
+  const booked=new Set(monthBookings.map(b=>b.date));
+  for(let i=0;i<offset;i++) html+=`<div class="cal-day empty"></div>`;
+  for(let d=1;d<=daysIn;d++){
+    const iso=`${viewY}-${pad(viewM+1)}-${pad(d)}`;
+    const cls=["cal-day", iso===todayIso?"today":"", iso===curIso?"selected":""].filter(Boolean).join(" ");
+    const dot=`<span class="cdot" style="${booked.has(iso)?"":"visibility:hidden"}"></span>`;
+    html+=`<button class="${cls}" data-day="${iso}"><span>${d}</span>${dot}</button>`;
+  }
+  $("calGrid").innerHTML=html;
+}
+
+/* ---------- whole-room card ---------- */
 function renderRoomCard(){
   const st=roomStatus();
-  const tag = st.kind==="full" ? "Fully booked"
-            : st.kind==="mine" ? "Booked by you"
-            : st.freeCount===HOURS.length ? "Free all day"
-            : `${st.freeCount}h free`;
-  const bar=st.segs.map(s=>`<span class="hseg ${s.state==="free"?"free":s.state==="mine"?"mine":""}" title="${s.h} ${s.state}"></span>`).join("");
+  const tag = st.kind==="full" ? "Fully booked" : st.kind==="mine" ? "Booked by you"
+            : st.freeCount===HOURS.length ? "Free all day" : `${st.freeCount}h free`;
+  const bar=st.segs.map(s=>`<span class="hseg ${s.state==="free"?"free":s.state==="mine"?"mine":""}"></span>`).join("");
   $("roomCard").innerHTML=`
     <button class="roomcard-btn ${st.kind} ${selectedDesk===ROOM?"selected":""}" data-desk="ROOM" aria-label="Whole room, ${tag}">
       <div class="rc-top"><span class="rc-title">Whole room</span><span class="tag">${tag}</span></div>
@@ -366,10 +425,9 @@ function renderRoomCard(){
     </button>`;
 }
 
-/* ---------- render floor plan ---------- */
+/* ---------- floor plan ---------- */
 function renderPlan(){
-  $("dayLabel").textContent=current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
-  $("dayIso").textContent=isoOf(current);
+  $("selDay").textContent = longDate(current);
   const hint=$("planHint");
   if(dataError){ hint.textContent="Couldn't reach the booking database, so availability may be out of date. "+dataError; hint.style.color="var(--danger)"; }
   else { hint.textContent="Tap a desk to see its times for the selected day."; hint.style.color=""; }
@@ -379,12 +437,9 @@ function renderPlan(){
     html+=`<div class="pod"><div class="pod-title">${escapeHtml(pod.name)}</div><div class="pod-grid">`;
     for(const desk of pod.desks){
       const st=deskStatus(desk);
-      const tag = st.kind==="full" ? "Full"
-                : st.kind==="mine" ? "Yours"
-                : `${st.freeCount} free`;
-      const bar=st.segs.map(s=>`<span class="hseg ${s.state==="free"?"free":s.state==="mine"?"mine":s.state==="allday"?"allday":""}" title="${s.h} ${s.state}"></span>`).join("");
-      html+=`<button class="desk ${st.kind} ${selectedDesk===desk?"selected":""}" data-desk="${attr(desk)}"
-                aria-label="${escapeHtml(desk)}, ${tag}">
+      const tag = st.kind==="full" ? "Full" : st.kind==="mine" ? "Yours" : `${st.freeCount} free`;
+      const bar=st.segs.map(s=>`<span class="hseg ${s.state==="free"?"free":s.state==="mine"?"mine":s.state==="allday"?"allday":""}"></span>`).join("");
+      html+=`<button class="desk ${st.kind} ${selectedDesk===desk?"selected":""}" data-desk="${attr(desk)}" aria-label="${escapeHtml(desk)}, ${tag}">
                 <div class="desk-top"><span class="desk-name">${escapeHtml(desk)}</span><span class="tag">${tag}</span></div>
                 <div class="hours-bar">${bar}</div></button>`;
     }
@@ -393,54 +448,39 @@ function renderPlan(){
   $("pods").innerHTML=html;
 }
 
-/* ---------- render desk / room detail ---------- */
+/* ---------- desk / room detail ---------- */
 function renderDetail(){
   const box=$("deskDetail");
   if(!selectedDesk){ box.classList.remove("open"); box.innerHTML=""; return; }
   const isRoom = selectedDesk===ROOM;
   const st = isRoom ? roomStatus() : deskStatus(selectedDesk);
-  const when=current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  const when=longDate(current);
 
-  const myAll = isRoom
-    ? (st.roomAll && st.roomAll.device_id===deviceId ? st.roomAll : null)
-    : (st.deskAll && st.deskAll.device_id===deviceId ? st.deskAll : null);
+  const myAll = isRoom ? (st.roomAll && st.roomAll.device_id===deviceId ? st.roomAll : null)
+                       : (st.deskAll && st.deskAll.device_id===deviceId ? st.deskAll : null);
   const blockedForDay = isRoom ? st.anyBooking : (st.deskList.length>0 || st.roomAny);
-
   let wholeDay;
-  if(myAll)
-    wholeDay=`<button class="btn danger" data-cancel="${myAll.id}">Cancel whole-day booking</button>`;
-  else if(blockedForDay)
-    wholeDay=`<button class="btn" disabled>Whole day unavailable</button><span class="hint">${isRoom?"Some desks or hours are already booked.":"Some hours are already booked."}</span>`;
-  else
-    wholeDay=`<button class="btn primary" data-book="${ALLDAY}">Book the whole ${isRoom?"room, all day":"day"}</button>`;
+  if(myAll) wholeDay=`<button class="btn danger" data-cancel="${myAll.id}">Cancel whole-day booking</button>`;
+  else if(blockedForDay) wholeDay=`<button class="btn" disabled>Whole day unavailable</button><span class="hint">${isRoom?"Some desks or hours are already booked.":"Some hours are already booked."}</span>`;
+  else wholeDay=`<button class="btn primary" data-book="${ALLDAY}">Book the whole ${isRoom?"room, all day":"day"}</button>`;
 
   let slots="";
   for(const s of st.segs){
     if(s.state==="free"){ slots+=`<button class="slot-btn free" data-book="${s.h}">${s.h}</button>`; continue; }
     if(s.state==="mine"){ slots+=`<button class="slot-btn mine" data-cancel="${s.booking?s.booking.id:""}" title="Your booking — tap to cancel">${s.h} ✕</button>`; continue; }
-    // someone else's booking (state "taken" or "allday")
-    const b=s.booking;
-    const cls = s.state==="allday" ? "allday" : "taken";
+    const b=s.booking, cls = s.state==="allday" ? "allday" : "taken";
     const ownSource = isRoom ? (s.source==="room") : (s.source==="desk");
     if(ownSource && b){
-      const who = escapeHtml(b.name||"someone");
-      slots+=`<button class="slot-btn ${cls} cancelable" data-cancelask="${b.id}" title="Booked by ${who} — tap to cancel">${s.h}</button>`;
+      slots+=`<button class="slot-btn ${cls} cancelable" data-cancelask="${b.id}" title="Booked by ${escapeHtml(b.name||"someone")} — tap to cancel">${s.h}</button>`;
     }else{
-      const t = s.source==="room" ? "Whole room is booked — cancel it from the Whole room card"
-                                  : "A desk is booked at this time";
+      const t = s.source==="room" ? "Whole room is booked — cancel it from the Whole room card" : "A desk is booked at this time";
       slots+=`<div class="slot-btn ${cls}" title="${t}">${s.h}</div>`;
     }
   }
-
-  const sub = isRoom
-    ? `${when} · tap a free time to book the room, or a booked time to cancel it`
-    : `${when} · tap a free time to book, or a booked time to cancel`;
-
-  box.innerHTML=`
-    <h2>${isRoom ? "Whole room" : escapeHtml(selectedDesk)}</h2>
-    <p class="sub">${sub}</p>
-    <div class="wholeday">${wholeDay}</div>
-    <div class="slotgrid">${slots}</div>`;
+  const sub = isRoom ? `${when} · tap a free time to book the room, or a booked time to cancel it`
+                     : `${when} · tap a free time to book, or a booked time to cancel`;
+  box.innerHTML=`<h2>${isRoom?"Whole room":escapeHtml(selectedDesk)}</h2>
+    <p class="sub">${sub}</p><div class="wholeday">${wholeDay}</div><div class="slotgrid">${slots}</div>`;
   box.classList.add("open");
 }
 
@@ -456,7 +496,22 @@ function renderMine(){
     </div>`).join("");
 }
 
-function renderAll(){ renderRoomCard(); renderPlan(); renderDetail(); renderMine(); }
+/* ---------- noticeboard ---------- */
+function renderComments(){
+  $("commentsSub").textContent = `Notes for ${longDate(current)}`;
+  const box=$("commentList");
+  if(!comments.length){ box.innerHTML=`<p class="comment-empty">No notes yet. Be the first to say hello.</p>`; return; }
+  const sorted=[...comments].sort((a,b)=> a.created_at<b.created_at?1:-1);
+  box.innerHTML=sorted.map(c=>{
+    const mine=c.device_id===deviceId;
+    const time=new Date(c.created_at).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+    return `<div class="comment">
+      <div class="c-meta"><span>${escapeHtml(c.name||"Anon")} · ${time}</span>${mine?`<button class="c-del" data-delc="${c.id}">remove</button>`:""}</div>
+      <div class="c-text">${escapeHtml(c.text)}</div></div>`;
+  }).join("");
+}
+
+function renderAll(){ renderCalendar(); renderRoomCard(); renderPlan(); renderDetail(); renderMine(); renderComments(); }
 
 /* ---------- booking flow ---------- */
 let pending=null;
@@ -464,7 +519,7 @@ const overlay=$("overlay");
 function openModal(desk,slot){
   pending={desk,slot};
   $("mTitle").textContent = desk===ROOM ? "Book the whole room" : `Book ${desk}`;
-  $("mWhen").textContent=`${current.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})} · ${slotLabel(slot)}`;
+  $("mWhen").textContent=`${longDate(current)} · ${slotLabel(slot)}`;
   $("mErr").textContent=""; $("consentBox").checked=false;
   $("nameInput").value=localStorage.getItem("desk_last_name")||"";
   overlay.classList.add("open"); $("nameInput").focus();
@@ -486,52 +541,63 @@ async function confirmBooking(){
   try{
     await store.create(booking);
     localStorage.setItem("desk_last_name",name);
-    closeModal(); await refresh(); renderAll();
+    closeModal(); await reloadAndRender();
   }catch(e){ $("mErr").textContent="Could not save the booking. "+(e.message||"Please try again."); }
 }
 async function cancelBooking(id){
-  try{ await store.remove(id); await refresh(); renderAll(); }
+  try{ await store.remove(id); await reloadAndRender(); }
   catch(e){ alert("Could not cancel: "+(e.message||"")); }
 }
 
-/* confirmation before cancelling someone else's booking */
+/* confirm before cancelling someone else's booking */
 let pendingCancel=null;
 const cancelOverlay=$("cancelOverlay");
 function askCancel(id){
-  const b=bookings.find(x=>x.id===id);
-  if(!b){ return; }
+  const b=bookings.find(x=>x.id===id); if(!b) return;
   pendingCancel=id;
-  const label=b.desk===ROOM?"Whole room":b.desk;
-  $("cWhen").textContent=`${label} · ${slotLabel(b.slot)} · booked by ${b.name||"someone"}`;
+  $("cWhen").textContent=`${b.desk===ROOM?"Whole room":b.desk} · ${slotLabel(b.slot)} · booked by ${b.name||"someone"}`;
   cancelOverlay.classList.add("open");
 }
 function closeCancel(){ cancelOverlay.classList.remove("open"); pendingCancel=null; }
 
-/* ---------- events ---------- */
-function selectDesk(id){
-  selectedDesk=id; renderAll();
-  $("deskDetail").scrollIntoView({behavior:"smooth",block:"nearest"});
+/* ---------- comments flow ---------- */
+async function postComment(){
+  const text=$("commentText").value.trim(); if(!text) return;
+  const name=$("commentName").value.trim().slice(0,40);
+  const cm={ id:uid(), date:isoOf(current), name, text:text.slice(0,280), device_id:deviceId, created_at:new Date().toISOString() };
+  try{ await store.createComment(cm); $("commentText").value=""; await refresh(); renderComments(); }
+  catch(e){ alert("Could not post note: "+(e.message||"")); }
 }
-$("pods").addEventListener("click",e=>{
-  const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk"));
-});
-$("roomCard").addEventListener("click",e=>{
-  const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk"));
-});
+async function delComment(id){
+  try{ await store.removeComment(id); await refresh(); renderComments(); }
+  catch(e){ alert("Could not remove note: "+(e.message||"")); }
+}
+
+/* ---------- events ---------- */
+function selectDesk(id){ selectedDesk=id; renderAll(); $("deskDetail").scrollIntoView({behavior:"smooth",block:"nearest"}); }
+function selectDay(iso){
+  const [y,m,d]=iso.split("-").map(Number);
+  current=new Date(y,m-1,d); current.setHours(0,0,0,0);
+  viewY=y; viewM=m-1;
+  refresh().then(renderAll);
+}
+$("pods").addEventListener("click",e=>{ const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk")); });
+$("roomCard").addEventListener("click",e=>{ const d=e.target.closest("[data-desk]"); if(d) selectDesk(d.getAttribute("data-desk")); });
+$("calGrid").addEventListener("click",e=>{ const d=e.target.closest("[data-day]"); if(d) selectDay(d.getAttribute("data-day")); });
 $("deskDetail").addEventListener("click",e=>{
-  const ask=e.target.closest("[data-cancelask]");
-  const book=e.target.closest("[data-book]");
-  const cancel=e.target.closest("[data-cancel]");
+  const ask=e.target.closest("[data-cancelask]"), book=e.target.closest("[data-book]"), cancel=e.target.closest("[data-cancel]");
   if(ask){ askCancel(ask.getAttribute("data-cancelask")); return; }
   if(cancel){ cancelBooking(cancel.getAttribute("data-cancel")); return; }
   if(book && selectedDesk){ openModal(selectedDesk, book.getAttribute("data-book")); }
 });
-$("mineList").addEventListener("click",e=>{
-  const c=e.target.closest("[data-cancel]"); if(c) cancelBooking(c.getAttribute("data-cancel"));
-});
-$("prevDay").onclick=()=>{ current.setDate(current.getDate()-1); refresh().then(renderAll); };
-$("nextDay").onclick=()=>{ current.setDate(current.getDate()+1); refresh().then(renderAll); };
-$("todayBtn").onclick=()=>{ current=new Date(); current.setHours(0,0,0,0); refresh().then(renderAll); };
+$("mineList").addEventListener("click",e=>{ const c=e.target.closest("[data-cancel]"); if(c) cancelBooking(c.getAttribute("data-cancel")); });
+$("commentList").addEventListener("click",e=>{ const d=e.target.closest("[data-delc]"); if(d) delComment(d.getAttribute("data-delc")); });
+$("postComment").onclick=postComment;
+
+$("prevMonth").onclick=()=>{ viewM--; if(viewM<0){viewM=11;viewY--;} refreshMonth().then(renderCalendar); };
+$("nextMonth").onclick=()=>{ viewM++; if(viewM>11){viewM=0;viewY++;} refreshMonth().then(renderCalendar); };
+$("todayBtn").onclick=()=>{ current=new Date(); current.setHours(0,0,0,0); viewY=current.getFullYear(); viewM=current.getMonth(); reloadAndRender(); };
+
 $("confirmBook").onclick=confirmBooking;
 $("cancelModal").onclick=closeModal;
 $("confirmCancel").onclick=async()=>{ const id=pendingCancel; closeCancel(); if(id) await cancelBooking(id); };
@@ -540,30 +606,37 @@ overlay.addEventListener("click",e=>{ if(e.target===overlay) closeModal(); });
 cancelOverlay.addEventListener("click",e=>{ if(e.target===cancelOverlay) closeCancel(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeModal(); closeCancel(); } });
 $("nameInput").addEventListener("keydown",e=>{ if(e.key==="Enter") confirmBooking(); });
-$("privacyLink").onclick=e=>{ e.preventDefault(); closeModal();
-  const d=document.querySelector("footer details"); d.open=true; d.scrollIntoView({behavior:"smooth"}); };
+
+/* ---------- data loading ---------- */
+async function refresh(){
+  try{
+    const iso=isoOf(current);
+    bookings=await store.list(iso);
+    comments=await store.listComments(iso);
+    dataError=null;
+  }catch(e){ dataError=(e&&e.message)||String(e); console.error("Load failed:",e); }
+}
+async function refreshMonth(){
+  try{
+    const s=isoOf(new Date(viewY,viewM,1)), e=isoOf(new Date(viewY,viewM+1,0));
+    monthBookings=await store.listMonth(s,e);
+  }catch(e){ monthBookings=[]; console.error("Month load failed:",e); }
+}
+async function reloadAndRender(){ await refresh(); await refreshMonth(); renderAll(); }
 
 /* ---------- boot ---------- */
-async function refresh(){
-  try{ bookings=await store.list(isoOf(current)); dataError=null; }
-  catch(e){ dataError=(e&&e.message)||String(e); console.error("Load failed:",e); }
-}
 function applyCopy(){
-  $("retentionText").textContent=`${CONFIG.retentionDays} days`;
-  if(SHARED){
-    $("modeText").textContent="Shared"; $("modeBadge").classList.add("shared");
-    $("storageText").textContent="Bookings are stored in a secured database (Supabase) and shared across everyone with access to this page. Choose an EU/UK region for the project.";
+  if(SHARED){ $("modeText").textContent="Shared"; $("modeBadge").classList.add("shared");
+    $("footNote").textContent="Bookings and notes are shared with everyone who has this link, stored securely in the London region and auto-removed "+CONFIG.retentionDays+" days after their date.";
   }else{
-    $("storageText").textContent="In demo mode, bookings stay only in this browser and are never sent anywhere. Enable shared mode in the config to store them centrally.";
-    $("footNote").innerHTML="Running in <strong>demo mode</strong> — bookings are saved only on this device. See the README to switch on shared bookings.";
+    $("footNote").textContent="Demo mode — bookings and notes are saved only on this device. Add your Supabase keys in the config to share them.";
   }
-  if(CONFIG.contactEmail)
-    $("contactText").innerHTML=`To make a request, contact <a href="mailto:${CONFIG.contactEmail}">${escapeHtml(CONFIG.contactEmail)}</a>.`;
 }
 (async function(){
   applyCopy();
   try{ await initStore(); }
   catch(e){ dataError=(e&&e.message)||String(e); console.error("Init failed:",e); }
+  await refreshMonth();
   await refresh();
   renderAll();
 })();
